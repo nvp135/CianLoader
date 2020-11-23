@@ -15,15 +15,9 @@ using RestSharp;
 
 namespace CianLib
 {
-    enum Status
-    {
-        Ok,
-        Captcha
-    }
     public class CianLibrary
     {
         Random random = new Random();
-        //HttpClient client;
         private RestClient client;
         private RestRequest request;
 
@@ -43,19 +37,27 @@ namespace CianLib
 
         private void InitClient(string antibot = "")
         {
-            var antibotValue =  antibot == "" ? "" : $"anti_bot={antibot}";
+            string antibotValue = "";
+            if (!String.IsNullOrEmpty(antibot))
+            {
+                antibotValue = $"anti_bot={antibot}";
+            }
+            else
+            {
+                antibotValue = $"anti_bot={Configuration.GetSection("Antibot")?.Value}";
+            }
             client = new RestClient();
             client.Timeout = -1;
             request = new RestRequest(Method.GET);
-            //var antibot = "2|1:0|10:1601925520|8:anti_bot|44:eyJyZW1vdGVfaXAiOiAiODcuMjUxLjE3My4yMjkifQ==|31a0b65eb66e82e920a765eb4f1b6410d6a348aece2cffc0054ac922cdaaa917";
             client.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:81.0) Gecko/20100101 Firefox/81.0";
             request.AddHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
             request.AddHeader("Accept-Language", "en-US,en;q=0.5");
             request.AddHeader("Connection", "keep-alive");
-            request.AddHeader("Cookie", $"__cfduid=da5612afab5692304217730ce90b9ec651600795469; __cf_bm=32f020ff4ab64c3bc2ccc458103c3f43e07ff19d-1600797547-1800-AfBJd5qs8cqxWhZORyfXbmz2bh6Zm4/2aGlHAMTVYNrTSMeXBfr2Z4LV0Zl9ByREFXF3VnPy/9dwBLB4ST+LEDA=; _CIAN_GK=bcfacd4e-2f5c-4960-890f-8df728a5c006; _gcl_au=1.1.456326789.1600795470; _ga=GA1.2.790058914.1600795470; _gid=GA1.2.1569458049.1600795470; _dc_gtm_UA-30374201-1=1; {antibot}");
+            request.AddHeader("Cookie", $"__cfduid=da5612afab5692304217730ce90b9ec651600795469; __cf_bm=32f020ff4ab64c3bc2ccc458103c3f43e07ff19d-1600797547-1800-AfBJd5qs8cqxWhZORyfXbmz2bh6Zm4/2aGlHAMTVYNrTSMeXBfr2Z4LV0Zl9ByREFXF3VnPy/9dwBLB4ST+LEDA=; _CIAN_GK=bcfacd4e-2f5c-4960-890f-8df728a5c006; _gcl_au=1.1.456326789.1600795470; _ga=GA1.2.790058914.1600795470; _gid=GA1.2.1569458049.1600795470; _dc_gtm_UA-30374201-1=1; {antibotValue}");
             request.AddHeader("Upgrade-Insecure-Requests", "1");
             request.AddHeader("Cache-Control", "max-age=0");
             request.AddHeader("TE", "Trailers");
+            
         }
 
         private void LoadConfiguration()
@@ -76,7 +78,14 @@ namespace CianLib
         private void GetCitiesConfiguration()
         {
             var cities = new List<City>();
-            Configuration.GetSection("Cities").Bind(cities);
+            try
+            {
+                Configuration.GetSection("Cities").Bind(cities);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
             CityList.AddRange(cities);
             foreach (var item in cities)
             {
@@ -103,7 +112,7 @@ namespace CianLib
                     Console.ForegroundColor = ConsoleColor.DarkGreen;
                     Console.WriteLine($"Loading {city.CityName}.");
                     Console.ResetColor();
-                    await GetCityOffers(city);
+                    await GetOffers(city);
                     Console.ForegroundColor = ConsoleColor.DarkGreen;
                     Console.WriteLine($"{city.CityName} has been loaded.");
                     Console.ResetColor();
@@ -117,7 +126,7 @@ namespace CianLib
             Console.ResetColor();
         }
 
-        public async Task GetCityOffers(City city)
+        public async Task GetOffers(City city)
         {
             string link = "";
             foreach (var dealType in city.DealTypes)
@@ -177,19 +186,15 @@ namespace CianLib
 
         private async Task<List<Offer>> ExtractPart(string url)
         {
-
-            //var htmldoc = new htmldocument();
-            //htmldoc.loadhtml(result.results_html);
-            //var endofhistory = htmldoc.documentnode.selectsinglenode(@"//div[@class=""market_listing_table_message""]")?.innertext.trim();
-
+            string responseContent = default(string);
             try
             {
-                await Task.Delay(200 + random.Next(100));
+                await Task.Delay(100 + random.Next(100));
                 client.BaseUrl = new Uri(url);
                 IRestResponse response = client.Execute(request);
                 if (response.StatusCode == System.Net.HttpStatusCode.OK)
                 {
-                    var responseContent = response.Content;
+                    responseContent = response.Content;
                     var cianJson = JsonConvert.DeserializeObject<OffersResponse>(responseContent);
                     if (cianJson?.data?.itemsCount > 0)
                     {
@@ -205,11 +210,26 @@ namespace CianLib
             }
             catch (Exception ex)
             {
+                CheckCaptcha(responseContent);
                 ErrorUrls.Add(url);
                 Console.WriteLine(ex.Message);
                 return null;
             }
             return null;
+        }
+
+        private void CheckCaptcha(string page)
+        {
+            var htmldoc = new HtmlDocument();
+            htmldoc.LoadHtml(page);
+            var captcha = htmldoc.DocumentNode.SelectSingleNode("//form[@id='form_captcha']")?.Name;//?. innertext.trim();
+            if (!String.IsNullOrEmpty(captcha))
+            {
+                Console.WriteLine("Enter new antibot token:");
+                var token = Console.ReadLine();
+                InitClient(token);
+            }
+            //var captcha = htmldoc.DocumentNode.SelectSingleNode(@"//form[@id=""form_captcha""");//?. innertext.trim();
         }
 
         public void SaveOffers(City city)
