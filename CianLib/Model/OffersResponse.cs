@@ -41,7 +41,7 @@ namespace CianLib.Model
     {
         [Key]
         public long row_id { get; set; }
-        public DateTime insert_date { get; set; }
+        public DateTime insertion_date { get; set; }
         public int city { get; set; }
         public bool soft_deleted { get; set; }
     }
@@ -70,7 +70,7 @@ namespace CianLib.Model
 
         public override string ToString()
         {
-            return $"{cian_id},{category},{village_id},{added},{house_id},{newobject_id},{photo},{price},{object_type},{lon},{filter_type},{creation_date},{deal_type},{from_developer},{lat},{service_id},{property_type},{id},{type},{city},{insert_date.ToShortDateString()}";
+            return $"{cian_id},{category},{village_id},{added},{house_id},{newobject_id},{photo},{price},{object_type},{lon},{filter_type},{creation_date},{deal_type},{from_developer},{lat},{service_id},{property_type},{id},{type},{city},{insertion_date.ToShortDateString()}";
         }
     }
 }

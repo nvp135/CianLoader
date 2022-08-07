@@ -24,7 +24,7 @@ namespace CianLib.EF
         {
 
             modelBuilder.Entity<Offer>()
-                .Property(e => e.insert_date).HasColumnType("date");
+                .Property(e => e.insertion_date).HasColumnType("date");
             modelBuilder.Entity<CianObjectPrice>()
                 .Property(e => e.insert_date).HasColumnType("date");
             modelBuilder.Entity<CianObject>()

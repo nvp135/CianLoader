@@ -12,6 +12,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
 using RestSharp;
+using CianLogger;
 
 namespace CianLib
 {
@@ -172,11 +173,11 @@ namespace CianLib
 
                 foreach (var item in ErrorUrls)
                 {
-                    LogToFile(item);
+                    Logger.WriteToLog(Path.Combine(Environment.CurrentDirectory, "log.log"), item);
                 }
                 ErrorUrls.Clear();
                     
-                offersList.Select(o => { o.insert_date = DateTime.Now; o.city = city.CityId; return o; }).ToList();
+                offersList.Select(o => { o.insertion_date = DateTime.Now; o.city = city.CityId; return o; }).ToList();
                 city.CityOffers.Add(offersList);
                 Console.ForegroundColor = ConsoleColor.DarkGreen;
                 Console.WriteLine($"{DateTime.Now}: For {city.CityName} {dealType} was loaded {offersList.Count} offers.");
@@ -189,7 +190,7 @@ namespace CianLib
             string responseContent = default(string);
             try
             {
-                await Task.Delay(100 + random.Next(100));
+                await Task.Delay(random.Next(100));
                 client.BaseUrl = new Uri(url);
                 IRestResponse response = client.Execute(request);
                 if (response.StatusCode == System.Net.HttpStatusCode.OK)
@@ -278,7 +279,7 @@ namespace CianLib
                 Console.ResetColor();
                 using (StreamWriter sw = File.CreateText($"{city.CityName} {DateTime.Now.ToString("yyyy-MM-dd")}.csv"))
                 {
-                    sw.WriteLine("cian_id,category,village_id,added,house_id,newobject_id,photo,price,object_type,lon,filter_type,creation_date,deal_type,from_developer,lat,service_id,property_type,id,type,city,insert_data");
+                    sw.WriteLine("cian_id,category,village_id,added,house_id,newobject_id,photo,price,object_type,lon,filter_type,creation_date,deal_type,from_developer,lat,service_id,property_type,id,type,city,insertion_date");
                     foreach (var offerList in city.CityOffers)
                     {
                         foreach (var item in offerList)
